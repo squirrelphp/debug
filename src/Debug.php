@@ -92,7 +92,7 @@ class Debug
          * @var OriginException $exception At this point we know that $exceptionClass inherits from OriginException for sure
          */
         $exception = new $exceptionClass(
-            $shownClass . $lastInstance['type'] . $lastInstance['function'] .
+            $shownClass . ( $lastInstance['type'] ?? '' ) . ( $lastInstance['function'] ?? '' ) .
             '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
             $lastInstance['file'] ?? '',
             $lastInstance['line'] ?? 0,
