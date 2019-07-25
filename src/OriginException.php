@@ -15,14 +15,24 @@ class OriginException extends \Exception
     private $originFile = '';
 
     /**
-     * @var string Line on which the problem originated
+     * @var int Line on which the problem originated
      */
-    private $originLine = '';
+    private $originLine = 0;
+
+    /**
+     * @var string File in which the exception was thrown
+     */
+    private $exceptionFile = '';
+
+    /**
+     * @var int Line on which the exception was thrown
+     */
+    private $exceptionLine = 0;
 
     /**
      * @param string $originCall Original call which lead to the exception
      * @param string $originFile File in which the problem originated
-     * @param string $originLine Line on which the problem originated
+     * @param int $originLine Line on which the problem originated
      * @param string $message
      * @param int $code
      * @param \Throwable|null $previous
@@ -30,39 +40,47 @@ class OriginException extends \Exception
     public function __construct(
         string $originCall,
         string $originFile,
-        string $originLine,
+        int $originLine,
         $message = "",
         $code = 0,
-        \Throwable $previous = null
+        ?\Throwable $previous = null
     ) {
         parent::__construct($message, $code, $previous);
+
+        $this->exceptionFile = $this->getFile();
+        $this->exceptionLine = $this->getLine();
 
         $this->originCall = $originCall;
         $this->originFile = $originFile;
         $this->originLine = $originLine;
+
+        // Replace the exception file and line to point to the more accurate origin
+        $this->file = $originFile;
+        $this->line = $originLine;
     }
 
-    /**
-     * @return string
-     */
     public function getOriginCall(): string
     {
         return $this->originCall;
     }
 
-    /**
-     * @return string
-     */
     public function getOriginFile(): string
     {
         return $this->originFile;
     }
 
-    /**
-     * @return string
-     */
-    public function getOriginLine(): string
+    public function getOriginLine(): int
     {
         return $this->originLine;
+    }
+
+    public function getExceptionFile(): string
+    {
+        return $this->exceptionFile;
+    }
+
+    public function getExceptionLine(): int
+    {
+        return $this->exceptionLine;
     }
 }

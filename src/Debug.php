@@ -95,7 +95,7 @@ class Debug
             $shownClass . $lastInstance['type'] . $lastInstance['function'] .
             '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
             $lastInstance['file'] ?? '',
-            $lastInstance['line'] ?? '',
+            $lastInstance['line'] ?? 0,
             \str_replace("\n", ' ', $message),
             ( isset($previousException) ? $previousException->getCode() : 0 ),
             $previousException

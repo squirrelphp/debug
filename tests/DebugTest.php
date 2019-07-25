@@ -11,6 +11,8 @@ class DebugTest extends \PHPUnit\Framework\TestCase
 {
     public function testCreateException()
     {
+        $debugClassPath = \preg_replace('#/tests/DebugTest.php$#si', '/src/Debug.php', __FILE__);
+
         $someRepository = new SomeClass();
 
         try {
@@ -21,6 +23,10 @@ class DebugTest extends \PHPUnit\Framework\TestCase
             $this->assertEquals('Something went wrong!', $e->getMessage());
             $this->assertEquals(__FILE__, $e->getOriginFile());
             $this->assertEquals(__LINE__-6, $e->getOriginLine());
+            $this->assertEquals(__FILE__, $e->getFile());
+            $this->assertEquals(__LINE__-8, $e->getLine());
+            $this->assertEquals($debugClassPath, $e->getExceptionFile());
+            $this->assertEquals(95, $e->getExceptionLine());
             $this->assertEquals('SomeClass->someFunction()', $e->getOriginCall());
         }
     }
