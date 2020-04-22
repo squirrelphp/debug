@@ -48,7 +48,8 @@ class Debug
             foreach ($backtraceClasses as $backtraceClass) {
                 // Check if the class or interface we are looking for is implemented or used
                 // by the current backtrace class
-                if (\in_array($backtraceClass, \class_implements($backtrace['class'])) ||
+                if (
+                    \in_array($backtraceClass, \class_implements($backtrace['class'])) ||
                     \in_array($backtraceClass, \class_parents($backtrace['class'])) ||
                     $backtraceClass === $backtrace['class']
                 ) {
@@ -106,11 +107,8 @@ class Debug
 
     /**
      * Sanitize function arguments for showing what caused an exception
-     *
-     * @param array $args
-     * @return string
      */
-    public static function sanitizeArguments(array $args)
+    public static function sanitizeArguments(array $args): string
     {
         $result = array();
 
@@ -126,9 +124,8 @@ class Debug
      * Convert debug data into a sanitized string which can be shown in a log or on screen
      *
      * @param mixed $data
-     * @return mixed
      */
-    public static function sanitizeData($data)
+    public static function sanitizeData($data): string
     {
         // Convert object to class name
         if (\is_object($data)) {

@@ -22,11 +22,11 @@ class DebugTest extends \PHPUnit\Framework\TestCase
         } catch (OriginException $e) {
             $this->assertEquals('Something went wrong!', $e->getMessage());
             $this->assertEquals(__FILE__, $e->getOriginFile());
-            $this->assertEquals(__LINE__-6, $e->getOriginLine());
+            $this->assertEquals(__LINE__ - 6, $e->getOriginLine());
             $this->assertEquals(__FILE__, $e->getFile());
-            $this->assertEquals(__LINE__-8, $e->getLine());
+            $this->assertEquals(__LINE__ - 8, $e->getLine());
             $this->assertEquals($debugClassPath, $e->getExceptionFile());
-            $this->assertEquals(94, $e->getExceptionLine());
+            $this->assertEquals(95, $e->getExceptionLine());
             $this->assertEquals('SomeClass->someFunction()', $e->getOriginCall());
         }
     }
