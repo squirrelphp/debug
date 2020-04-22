@@ -37,6 +37,7 @@
         }
     },
     "scripts": {
+        "post-install-cmd": ["@composer bin all install --ansi"],
         "phpstan": "vendor/bin/phpstan analyse",
         "phpstan_base": "vendor/bin/phpstan analyse --configuration phpstan_base.neon --error-format baselineNeon > phpstan-baseline.neon",
         "phpstan_clear": "vendor/bin/phpstan clear-result-cache",
