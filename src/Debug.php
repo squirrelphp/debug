@@ -49,8 +49,8 @@ class Debug
                 // Check if the class or interface we are looking for is implemented or used
                 // by the current backtrace class
                 if (
-                    \in_array($backtraceClass, \class_implements($backtrace['class'])) ||
-                    \in_array($backtraceClass, \class_parents($backtrace['class'])) ||
+                    \in_array($backtraceClass, \class_implements($backtrace['class']), true) ||
+                    \in_array($backtraceClass, \class_parents($backtrace['class']), true) ||
                     $backtraceClass === $backtrace['class']
                 ) {
                     $lastInstance = $backtrace;
@@ -71,19 +71,19 @@ class Debug
         $shownClass = \array_pop($parts);
 
         // Make sure the provided exception class inherits from Throwable, otherwise replace it with Exception
-        if (!\in_array(\Throwable::class, \class_implements($exceptionClass))) {
+        if (!\in_array(\Throwable::class, \class_implements($exceptionClass), true)) {
             $exceptionClass = \Exception::class;
         }
 
         // If we have no OriginException child class, we assume the default Exception class constructor is used
-        if (!\in_array(OriginException::class, \class_parents($exceptionClass)) && $exceptionClass !== OriginException::class) {
+        if (!\in_array(OriginException::class, \class_parents($exceptionClass), true) && $exceptionClass !== OriginException::class) {
             /**
              * @var \Throwable $exception At this point we know that $exceptionClass inherits from \Throwable for sure
              */
             $exception = new $exceptionClass(
                 \str_replace("\n", ' ', $message),
                 ( isset($previousException) ? $previousException->getCode() : 0 ),
-                $previousException
+                $previousException,
             );
 
             return $exception;
@@ -99,7 +99,7 @@ class Debug
             $lastInstance['line'] ?? 0,
             \str_replace("\n", ' ', $message),
             ( isset($previousException) ? $previousException->getCode() : 0 ),
-            $previousException
+            $previousException,
         );
 
         return $exception;
