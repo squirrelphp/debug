@@ -83,7 +83,7 @@ class Debug
             $exception = new $exceptionClass(
                 \str_replace("\n", ' ', $message),
                 ( isset($previousException) ? $previousException->getCode() : 0 ),
-                $previousException,
+                $previousException
             );
 
             return $exception;
@@ -99,7 +99,7 @@ class Debug
             $lastInstance['line'] ?? 0,
             \str_replace("\n", ' ', $message),
             ( isset($previousException) ? $previousException->getCode() : 0 ),
-            $previousException,
+            $previousException
         );
 
         return $exception;
