@@ -13,6 +13,7 @@ class Debug
      * @param string $exceptionClass
      * @psalm-param class-string $exceptionClass
      * @param string|array $backtraceClasses
+     * @psalm-param class-string|list<class-string> $backtraceClasses
      * @param string $message
      * @param \Throwable|null $previousException
      * @return \Throwable
@@ -49,9 +50,11 @@ class Debug
                 $classImplements = \class_implements($backtrace['class']);
                 $classParents = \class_parents($backtrace['class']);
 
+                // @codeCoverageIgnoreStart
                 if ($classImplements === false || $classParents === false) {
                     continue;
                 }
+                // @codeCoverageIgnoreEnd
 
                 // Check if the class or interface we are looking for is implemented or used
                 // by the current backtrace class
@@ -80,6 +83,7 @@ class Debug
         $classImplements = \class_implements($exceptionClass);
         $classParents = \class_parents($exceptionClass);
 
+        // @codeCoverageIgnoreStart
         if ($classImplements === false) {
             $classImplements = [];
         }
@@ -87,6 +91,7 @@ class Debug
         if ($classParents === false) {
             $classParents = [];
         }
+        // @codeCoverageIgnoreEnd
 
         // Make sure the provided exception class inherits from Throwable, otherwise replace it with Exception
         if (!\in_array(\Throwable::class, $classImplements, true)) {

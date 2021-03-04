@@ -48,7 +48,7 @@
         "phpunit_clover": "vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml",
         "phpcs": "vendor/bin/phpcs --standard=ruleset.xml --extensions=php --cache src tests",
         "phpcsfix": "vendor/bin/phpcbf --standard=ruleset.xml --extensions=php --cache src tests",
-        "coverage": "vendor/bin/phpunit --coverage-html tests/_reports",
+        "coverage": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-html tests/_reports",
         "binupdate": "@composer bin all update --ansi",
         "bininstall": "@composer bin all install --ansi"
     }
