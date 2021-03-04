@@ -26,7 +26,7 @@ class DebugTest extends \PHPUnit\Framework\TestCase
             $this->assertEquals(__FILE__, $e->getFile());
             $this->assertEquals(__LINE__ - 8, $e->getLine());
             $this->assertEquals($debugClassPath, $e->getExceptionFile());
-            $this->assertEquals(95, $e->getExceptionLine());
+            $this->assertEquals(113, $e->getExceptionLine());
             $this->assertEquals('SomeClass->someFunction()', $e->getOriginCall());
         }
     }

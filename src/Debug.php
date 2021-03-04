@@ -46,11 +46,18 @@ class Debug
 
             // Replace backtrace instance if we find a valid class insance
             foreach ($backtraceClasses as $backtraceClass) {
+                $classImplements = \class_implements($backtrace['class']);
+                $classParents = \class_parents($backtrace['class']);
+
+                if ($classImplements === false || $classParents === false) {
+                    continue;
+                }
+
                 // Check if the class or interface we are looking for is implemented or used
                 // by the current backtrace class
                 if (
-                    \in_array($backtraceClass, \class_implements($backtrace['class']), true) ||
-                    \in_array($backtraceClass, \class_parents($backtrace['class']), true) ||
+                    \in_array($backtraceClass, $classImplements, true) ||
+                    \in_array($backtraceClass, $classParents, true) ||
                     $backtraceClass === $backtrace['class']
                 ) {
                     $lastInstance = $backtrace;
@@ -70,13 +77,24 @@ class Debug
         $parts = \explode('\\', $assignedBacktraceClass);
         $shownClass = \array_pop($parts);
 
+        $classImplements = \class_implements($exceptionClass);
+        $classParents = \class_parents($exceptionClass);
+
+        if ($classImplements === false) {
+            $classImplements = [];
+        }
+
+        if ($classParents === false) {
+            $classParents = [];
+        }
+
         // Make sure the provided exception class inherits from Throwable, otherwise replace it with Exception
-        if (!\in_array(\Throwable::class, \class_implements($exceptionClass), true)) {
+        if (!\in_array(\Throwable::class, $classImplements, true)) {
             $exceptionClass = \Exception::class;
         }
 
         // If we have no OriginException child class, we assume the default Exception class constructor is used
-        if (!\in_array(OriginException::class, \class_parents($exceptionClass), true) && $exceptionClass !== OriginException::class) {
+        if (!\in_array(OriginException::class, $classParents, true) && $exceptionClass !== OriginException::class) {
             /**
              * @var \Throwable $exception At this point we know that $exceptionClass inherits from \Throwable for sure
              */
