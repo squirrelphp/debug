@@ -33,16 +33,13 @@ class OriginException extends \Exception
      * @param string $originCall Original call which lead to the exception
      * @param string $originFile File in which the problem originated
      * @param int $originLine Line on which the problem originated
-     * @param string $message
-     * @param int $code
-     * @param \Throwable|null $previous
      */
     public function __construct(
         string $originCall,
         string $originFile,
         int $originLine,
-        $message = "",
-        $code = 0,
+        string $message = "",
+        int $code = 0,
         ?\Throwable $previous = null
     ) {
         parent::__construct($message, $code, $previous);
