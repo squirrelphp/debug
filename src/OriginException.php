@@ -7,27 +7,27 @@ class OriginException extends \Exception
     /**
      * @var string Original call which lead to the exception
      */
-    private $originCall = '';
+    private string $originCall = '';
 
     /**
      * @var string File in which the problem originated
      */
-    private $originFile = '';
+    private string $originFile = '';
 
     /**
      * @var int Line on which the problem originated
      */
-    private $originLine = 0;
+    private int $originLine = 0;
 
     /**
      * @var string File in which the exception was thrown
      */
-    private $exceptionFile = '';
+    private string $exceptionFile = '';
 
     /**
      * @var int Line on which the exception was thrown
      */
-    private $exceptionLine = 0;
+    private int $exceptionLine = 0;
 
     /**
      * @param string $originCall Original call which lead to the exception
@@ -40,7 +40,7 @@ class OriginException extends \Exception
         int $originLine,
         string $message = "",
         int $code = 0,
-        ?\Throwable $previous = null
+        ?\Throwable $previous = null,
     ) {
         parent::__construct($message, $code, $previous);
 

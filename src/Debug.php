@@ -10,19 +10,14 @@ class Debug
     /**
      * Create exception with correct backtrace while ignoring some classes/interfaces ($backtraceClasses)
      *
-     * @param string $exceptionClass
-     * @psalm-param class-string $exceptionClass
-     * @param string|array $backtraceClasses
-     * @psalm-param class-string|list<class-string> $backtraceClasses
-     * @param string $message
-     * @param \Throwable|null $previousException
-     * @return \Throwable
+     * @param class-string $exceptionClass
+     * @param class-string|list<class-string> $backtraceClasses
      */
     public static function createException(
         string $exceptionClass,
-        $backtraceClasses,
+        string|array $backtraceClasses,
         string $message,
-        ?\Throwable $previousException = null
+        ?\Throwable $previousException = null,
     ): \Throwable {
         // Convert backtrace class to an array if it is a string
         if (\is_string($backtraceClasses)) {
@@ -106,24 +101,22 @@ class Debug
             $exception = new $exceptionClass(
                 \str_replace("\n", ' ', $message),
                 ( isset($previousException) ? $previousException->getCode() : 0 ),
-                $previousException
+                $previousException,
             );
-
-            return $exception;
+        } else {
+            /**
+             * @var OriginException $exception At this point we know that $exceptionClass inherits from OriginException for sure
+             */
+            $exception = new $exceptionClass(
+                $shownClass . ($lastInstance['type'] ?? '') . ($lastInstance['function'] ?? '') .
+                '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
+                $lastInstance['file'] ?? '',
+                $lastInstance['line'] ?? 0,
+                \str_replace("\n", ' ', $message),
+                (isset($previousException) ? $previousException->getCode() : 0),
+                $previousException,
+            );
         }
-
-        /**
-         * @var OriginException $exception At this point we know that $exceptionClass inherits from OriginException for sure
-         */
-        $exception = new $exceptionClass(
-            $shownClass . ( $lastInstance['type'] ?? '' ) . ( $lastInstance['function'] ?? '' ) .
-            '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
-            $lastInstance['file'] ?? '',
-            $lastInstance['line'] ?? 0,
-            \str_replace("\n", ' ', $message),
-            ( isset($previousException) ? $previousException->getCode() : 0 ),
-            $previousException
-        );
 
         return $exception;
     }
@@ -133,7 +126,7 @@ class Debug
      */
     public static function sanitizeArguments(array $args): string
     {
-        $result = array();
+        $result = [];
 
         // Go through all arguments and prepare them for output
         foreach ($args as $key => $value) {
@@ -145,10 +138,8 @@ class Debug
 
     /**
      * Convert debug data into a sanitized string which can be shown in a log or on screen
-     *
-     * @param mixed $data
      */
-    public static function sanitizeData($data): string
+    public static function sanitizeData(mixed $data): string
     {
         // Convert object to class name
         if (\is_object($data)) {
