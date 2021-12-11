@@ -3,9 +3,9 @@
 namespace Squirrel\Debug;
 
 /**
- * Debug functionality: create exception, sanitize data
+ * Debug functionality: create exceptions, sanitize data and function arguments
  */
-class Debug
+final class Debug
 {
     /**
      * Create exception with correct backtrace while ignoring some classes/interfaces ($ignoreClasses)
@@ -21,24 +21,11 @@ class Debug
         string|array $ignoreNamespaces = [],
         ?\Throwable $previousException = null,
     ): \Throwable {
-        if (\is_string($ignoreClasses)) {
-            $ignoreClasses = [$ignoreClasses];
-        }
+        $ignoreClasses = self::convertToArray($ignoreClasses);
+        $ignoreNamespaces = self::convertToArray($ignoreNamespaces);
 
-        if (\is_string($ignoreNamespaces)) {
-            $ignoreNamespaces = [$ignoreNamespaces];
-        }
-
-        $removeEmptyStrings = function (string $s): bool {
-            if (\strlen($s) === 0) {
-                return false;
-            }
-
-            return true;
-        };
-
-        $ignoreClasses = \array_filter($ignoreClasses, $removeEmptyStrings);
-        $ignoreNamespaces = \array_filter($ignoreNamespaces, $removeEmptyStrings);
+        $ignoreClasses = \array_filter($ignoreClasses, [Debug::class, 'isNotEmptyString']);
+        $ignoreNamespaces = \array_filter($ignoreNamespaces, [Debug::class, 'isNotEmptyString']);
 
         // Get backtrace to find out where the query error originated
         $backtraceList = \debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT);
@@ -56,42 +43,14 @@ class Debug
 
             $lastInstance ??= $backtrace;
 
-            $classImplements = \class_implements($backtrace['class']);
-            $classParents = \class_parents($backtrace['class']);
-
-            // @codeCoverageIgnoreStart
-            if ($classImplements === false) {
-                $classImplements = [];
+            if (self::isIgnoredClass($backtrace['class'], $ignoreClasses)) {
+                $lastInstance = $backtrace;
+                continue;
             }
 
-            if ($classParents === false) {
-                $classParents = [];
-            }
-            // @codeCoverageIgnoreEnd
-
-            foreach ($ignoreClasses as $ignoreClass) {
-                // Check if the class or interface we are looking for is implemented or used
-                // by the current backtrace class
-                if (
-                    \in_array($ignoreClass, $classImplements, true) ||
-                    \in_array($ignoreClass, $classParents, true) ||
-                    $ignoreClass === $backtrace['class']
-                ) {
-                    $lastInstance = $backtrace;
-
-                    continue 2;
-                }
-            }
-
-            foreach ($ignoreNamespaces as $ignoreNamespace) {
-                // Check if the backtrace class starts with any ignored namespaces
-                if (
-                    \str_starts_with($backtrace['class'], $ignoreNamespace)
-                ) {
-                    $lastInstance = $backtrace;
-
-                    continue 2;
-                }
+            if (self::isIgnoredNamespace($backtrace['class'], $ignoreNamespaces)) {
+                $lastInstance = $backtrace;
+                continue;
             }
 
             // We reached the first non-ignored backtrace - we are at the top
@@ -106,26 +65,16 @@ class Debug
         $parts = \explode('\\', $lastInstance['class'] ?? '');
         $shownClass = \array_pop($parts);
 
-        $classImplements = \class_implements($exceptionClass);
-        $classParents = \class_parents($exceptionClass);
-
-        // @codeCoverageIgnoreStart
-        if ($classImplements === false) {
-            $classImplements = [];
-        }
-
-        if ($classParents === false) {
-            $classParents = [];
-        }
-        // @codeCoverageIgnoreEnd
-
-        // Make sure the provided exception class inherits from Throwable, otherwise replace it with Exception
-        if (!\in_array(\Throwable::class, $classImplements, true)) {
+        // Make sure the provided exception class inherits from Throwable or replace it with Exception
+        if (!\in_array(\Throwable::class, self::getClassInterfaces($exceptionClass), true)) {
             $exceptionClass = \Exception::class;
         }
 
         // If we have no OriginException child class, we assume the default Exception class constructor is used
-        if (!\in_array(OriginException::class, $classParents, true) && $exceptionClass !== OriginException::class) {
+        if (
+            !\in_array(OriginException::class, self::getClassParents($exceptionClass), true)
+            && $exceptionClass !== OriginException::class
+        ) {
             /**
              * @var \Throwable $exception At this point we know that $exceptionClass inherits from \Throwable for sure
              */
@@ -139,13 +88,12 @@ class Debug
              * @var OriginException $exception At this point we know that $exceptionClass inherits from OriginException for sure
              */
             $exception = new $exceptionClass(
-                $shownClass . ($lastInstance['type'] ?? '') . ($lastInstance['function'] ?? '') .
-                '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
-                $lastInstance['file'] ?? '',
-                $lastInstance['line'] ?? 0,
-                \str_replace("\n", ' ', $message),
-                (isset($previousException) ? $previousException->getCode() : 0),
-                $previousException,
+                originCall: $shownClass . ($lastInstance['type'] ?? '') . ($lastInstance['function'] ?? '') . '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
+                originFile: $lastInstance['file'] ?? '',
+                originLine: $lastInstance['line'] ?? 0,
+                message: \str_replace("\n", ' ', $message),
+                code: (isset($previousException) ? $previousException->getCode() : 0),
+                previous: $previousException,
             );
         }
 
@@ -206,5 +154,107 @@ class Debug
         }
 
         return '[' . \implode(', ', $result) . ']';
+    }
+
+    private static function convertToArray(string|array $list): array
+    {
+        if (\is_string($list)) {
+            $list = [$list];
+        }
+
+        return $list;
+    }
+
+    private static function isNotEmptyString(string $s): bool
+    {
+        if (\strlen($s) === 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param class-string $class
+     * @return array<string, class-string>
+     */
+    private static function getClassParents(string $class): array
+    {
+        $classParents = \class_parents($class);
+
+        // @codeCoverageIgnoreStart
+        if ($classParents === false) {
+            $classParents = [];
+        }
+        // @codeCoverageIgnoreEnd
+
+        return $classParents;
+    }
+
+    /**
+     * @param class-string $class
+     * @return array<string, string>
+     */
+    private static function getClassInterfaces(string $class): array
+    {
+        $classImplements = \class_implements($class);
+
+        // @codeCoverageIgnoreStart
+        if ($classImplements === false) {
+            $classImplements = [];
+        }
+        // @codeCoverageIgnoreEnd
+
+        return $classImplements;
+    }
+
+    /**
+     * @param class-string $class
+     * @return array<string, string>
+     */
+    private static function getClasses(string $class): array
+    {
+        return \array_merge(self::getClassInterfaces($class), self::getClassParents($class));
+    }
+
+    /**
+     * @param class-string $backtraceClass
+     * @param class-string[] $ignoreClasses
+     */
+    private static function isIgnoredClass(
+        string $backtraceClass,
+        array $ignoreClasses,
+    ): bool {
+        $possibleClasses = self::getClasses($backtraceClass);
+
+        foreach ($ignoreClasses as $ignoreClass) {
+            if (
+                \in_array($ignoreClass, $possibleClasses, true) ||
+                $ignoreClass === $backtraceClass
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param class-string $backtraceClass
+     * @param string[] $ignoreNamespaces
+     */
+    private static function isIgnoredNamespace(
+        string $backtraceClass,
+        array $ignoreNamespaces,
+    ): bool {
+        foreach ($ignoreNamespaces as $ignoreNamespace) {
+            if (
+                \str_starts_with($backtraceClass, $ignoreNamespace)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

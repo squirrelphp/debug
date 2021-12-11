@@ -10,7 +10,7 @@ use Squirrel\Debug\Tests\ExceptionTestClasses\SomeClass;
 
 class DebugTest extends \PHPUnit\Framework\TestCase
 {
-    private const DEBUG_CLASS_EXCEPTION_LINE = 141;
+    private const DEBUG_CLASS_EXCEPTION_LINE = 90;
 
     public function testCreateException()
     {
