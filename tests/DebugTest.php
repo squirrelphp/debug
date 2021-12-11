@@ -1,14 +1,17 @@
 <?php
 
-namespace Squirrel\Strings\Tests;
+namespace Squirrel\Debug\Tests;
 
 use Squirrel\Debug\Debug;
 use Squirrel\Debug\OriginException;
+use Squirrel\Debug\Tests\ExceptionTestClasses\NamespaceClass;
 use Squirrel\Debug\Tests\ExceptionTestClasses\NoExceptionClass;
 use Squirrel\Debug\Tests\ExceptionTestClasses\SomeClass;
 
 class DebugTest extends \PHPUnit\Framework\TestCase
 {
+    private const DEBUG_CLASS_EXCEPTION_LINE = 141;
+
     public function testCreateException()
     {
         $debugClassPath = \preg_replace('#/tests/DebugTest.php$#si', '/src/Debug.php', __FILE__);
@@ -26,30 +29,73 @@ class DebugTest extends \PHPUnit\Framework\TestCase
             $this->assertEquals(__FILE__, $e->getFile());
             $this->assertEquals(__LINE__ - 8, $e->getLine());
             $this->assertEquals($debugClassPath, $e->getExceptionFile());
-            $this->assertEquals(110, $e->getExceptionLine());
+            $this->assertEquals(self::DEBUG_CLASS_EXCEPTION_LINE, $e->getExceptionLine());
             $this->assertEquals('SomeClass->someFunction()', $e->getOriginCall());
+        }
+    }
+
+    public function testCreateExceptionWithNamespace()
+    {
+        $debugClassPath = \preg_replace('#/tests/DebugTest.php$#si', '/src/Debug.php', __FILE__);
+
+        $someRepository = new NamespaceClass();
+
+        try {
+            $someRepository->someFunction();
+
+            $this->assertFalse(true);
+        } catch (OriginException $e) {
+            $this->assertEquals('Something went wrong!', $e->getMessage());
+            $this->assertEquals(__FILE__, $e->getOriginFile());
+            $this->assertEquals(__LINE__ - 6, $e->getOriginLine());
+            $this->assertEquals(__FILE__, $e->getFile());
+            $this->assertEquals(__LINE__ - 8, $e->getLine());
+            $this->assertEquals($debugClassPath, $e->getExceptionFile());
+            $this->assertEquals(self::DEBUG_CLASS_EXCEPTION_LINE, $e->getExceptionLine());
+            $this->assertEquals('NamespaceClass->someFunction()', $e->getOriginCall());
         }
     }
 
     public function testInvalidExceptionClass()
     {
-        $exception = Debug::createException(NoExceptionClass::class, [], 'Something went wrong!');
+        $exception = Debug::createException(NoExceptionClass::class, 'Something went wrong!');
 
         $this->assertEquals(\Exception::class, \get_class($exception));
     }
 
     public function testBaseExceptionClass()
     {
-        $exception = Debug::createException(OriginException::class, [], 'Something went wrong!');
+        $e = Debug::createException(OriginException::class, 'Something went wrong!');
 
-        $this->assertEquals(OriginException::class, \get_class($exception));
+        $this->assertEquals(OriginException::class, \get_class($e));
+        $this->assertEquals('Something went wrong!', $e->getMessage());
+        $this->assertEquals(__FILE__, $e->getOriginFile());
+        $this->assertEquals(__LINE__ - 5, $e->getOriginLine());
+        $this->assertEquals(__FILE__, $e->getFile());
+        $this->assertEquals(__LINE__ - 7, $e->getLine());
+        $this->assertEquals(self::DEBUG_CLASS_EXCEPTION_LINE, $e->getExceptionLine());
+        $this->assertEquals('Debug::createException(\'Squirrel\\\\Debug\\\\OriginException\', \'Something went wrong!\')', $e->getOriginCall());
     }
 
     public function testBaseExceptionClassStringBacktraceClasses()
     {
-        $exception = Debug::createException(OriginException::class, '', 'Something went wrong!');
+        $exception = Debug::createException(OriginException::class, 'Something went wrong!', '');
 
         $this->assertEquals(OriginException::class, \get_class($exception));
+    }
+
+    public function testBaseExceptionClassStringBacktraceAndNamespaceClasses()
+    {
+        $e = Debug::createException(OriginException::class, 'Something went wrong!', '', '');
+
+        $this->assertEquals(OriginException::class, \get_class($e));
+        $this->assertEquals('Something went wrong!', $e->getMessage());
+        $this->assertEquals(__FILE__, $e->getOriginFile());
+        $this->assertEquals(__LINE__ - 5, $e->getOriginLine());
+        $this->assertEquals(__FILE__, $e->getFile());
+        $this->assertEquals(__LINE__ - 7, $e->getLine());
+        $this->assertEquals(self::DEBUG_CLASS_EXCEPTION_LINE, $e->getExceptionLine());
+        $this->assertEquals('Debug::createException(\'Squirrel\\\\Debug\\\\OriginException\', \'Something went wrong!\', [], [])', $e->getOriginCall());
     }
 
     public function testBinaryData()

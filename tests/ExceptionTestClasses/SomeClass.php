@@ -10,7 +10,11 @@ class SomeClass
     public function someFunction()
     {
         return \array_map(function () {
-            throw Debug::createException(OriginException::class, [SomeClass::class], 'Something went wrong!', null);
+            throw Debug::createException(
+                OriginException::class,
+                'Something went wrong!',
+                ignoreClasses: [SomeClass::class],
+            );
         }, ['dada','mumu']);
     }
 }

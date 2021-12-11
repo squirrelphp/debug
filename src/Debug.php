@@ -8,28 +8,42 @@ namespace Squirrel\Debug;
 class Debug
 {
     /**
-     * Create exception with correct backtrace while ignoring some classes/interfaces ($backtraceClasses)
+     * Create exception with correct backtrace while ignoring some classes/interfaces ($ignoreClasses)
      *
      * @param class-string $exceptionClass
-     * @param class-string|list<class-string> $backtraceClasses
+     * @param class-string|list<class-string> $ignoreClasses Classes and interfaces to ignore in backtrace
+     * @param string|string[] $ignoreNamespaces Namespaces to ignore
      */
     public static function createException(
         string $exceptionClass,
-        string|array $backtraceClasses,
         string $message,
+        string|array $ignoreClasses = [],
+        string|array $ignoreNamespaces = [],
         ?\Throwable $previousException = null,
     ): \Throwable {
-        // Convert backtrace class to an array if it is a string
-        if (\is_string($backtraceClasses)) {
-            $backtraceClasses = [$backtraceClasses];
+        if (\is_string($ignoreClasses)) {
+            $ignoreClasses = [$ignoreClasses];
         }
 
-        $assignedBacktraceClass = '';
+        if (\is_string($ignoreNamespaces)) {
+            $ignoreNamespaces = [$ignoreNamespaces];
+        }
+
+        $removeEmptyStrings = function (string $s): bool {
+            if (\strlen($s) === 0) {
+                return false;
+            }
+
+            return true;
+        };
+
+        $ignoreClasses = \array_filter($ignoreClasses, $removeEmptyStrings);
+        $ignoreNamespaces = \array_filter($ignoreNamespaces, $removeEmptyStrings);
 
         // Get backtrace to find out where the query error originated
         $backtraceList = \debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT);
 
-        // Where the DBInterface was called
+        // Where the relevant method call was made
         $lastInstance = null;
 
         // Go through backtrace and find the topmost caller
@@ -40,39 +54,56 @@ class Debug
                 continue;
             }
 
-            // Replace backtrace instance if we find a valid class insance
-            foreach ($backtraceClasses as $backtraceClass) {
-                $classImplements = \class_implements($backtrace['class']);
-                $classParents = \class_parents($backtrace['class']);
+            $lastInstance ??= $backtrace;
 
-                // @codeCoverageIgnoreStart
-                if ($classImplements === false || $classParents === false) {
-                    continue;
-                }
-                // @codeCoverageIgnoreEnd
+            $classImplements = \class_implements($backtrace['class']);
+            $classParents = \class_parents($backtrace['class']);
 
+            // @codeCoverageIgnoreStart
+            if ($classImplements === false) {
+                $classImplements = [];
+            }
+
+            if ($classParents === false) {
+                $classParents = [];
+            }
+            // @codeCoverageIgnoreEnd
+
+            foreach ($ignoreClasses as $ignoreClass) {
                 // Check if the class or interface we are looking for is implemented or used
                 // by the current backtrace class
                 if (
-                    \in_array($backtraceClass, $classImplements, true) ||
-                    \in_array($backtraceClass, $classParents, true) ||
-                    $backtraceClass === $backtrace['class']
+                    \in_array($ignoreClass, $classImplements, true) ||
+                    \in_array($ignoreClass, $classParents, true) ||
+                    $ignoreClass === $backtrace['class']
                 ) {
                     $lastInstance = $backtrace;
-                    $assignedBacktraceClass = $backtraceClass;
+
+                    continue 2;
                 }
             }
 
-            // We reached the first non-DBInterface backtrace - we are at the top
-            if ($lastInstance !== null) {
-                if ($lastInstance !== $backtrace) {
-                    break;
+            foreach ($ignoreNamespaces as $ignoreNamespace) {
+                // Check if the backtrace class starts with any ignored namespaces
+                if (
+                    \str_starts_with($backtrace['class'], $ignoreNamespace)
+                ) {
+                    $lastInstance = $backtrace;
+
+                    continue 2;
                 }
+            }
+
+            // We reached the first non-ignored backtrace - we are at the top
+            if (
+                $lastInstance !== $backtrace
+            ) {
+                break;
             }
         }
 
         // Shorten the backtrace class to just the class name without namespace
-        $parts = \explode('\\', $assignedBacktraceClass);
+        $parts = \explode('\\', $lastInstance['class'] ?? '');
         $shownClass = \array_pop($parts);
 
         $classImplements = \class_implements($exceptionClass);

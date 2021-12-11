@@ -15,7 +15,7 @@ OriginException
 
 When using libraries and abstractions it often is not relevant where an exception was thrown, but where in the application the relevant call was made to the library/component that then causes the exception. This library enables libraries to go through the backtrace, capture the place where the library was called, and to point out the specific function call that caused a problem by throwing an OriginException with the origin call and location.
 
-`Squirrel\Debug\Debug::createException` provides this functionality by specifying what exception should be created and what classes/interfaces in the backtrace should be ignored and considered as part of the library (and therefore not the true cause of the exception).
+`Squirrel\Debug\Debug::createException` provides this functionality by specifying what exception should be created and what classes/interfaces/namespaces in the backtrace should be ignored and considered as part of the library (and therefore not the true cause of the exception).
 
 Sanitize data and arguments
 ---------------------------

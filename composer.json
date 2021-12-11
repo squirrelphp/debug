@@ -40,7 +40,7 @@
     "scripts": {
         "phpstan": "vendor/bin/phpstan analyse",
         "phpstan_full": "vendor/bin/phpstan clear-result-cache && vendor/bin/phpstan analyse",
-        "phpstan_base": "vendor/bin/phpstan analyse --configuration phpstan_base.neon --error-format baselineNeon > phpstan-baseline.neon",
+        "phpstan_base": "vendor/bin/phpstan analyse --configuration=phpstan.neon --generate-baseline=phpstan-baseline.neon",
         "psalm": "vendor/bin/psalm --show-info=false",
         "psalm_full": "vendor/bin/psalm --clear-cache && vendor/bin/psalm --show-info=false",
         "psalm_base": "vendor/bin/psalm --set-baseline=psalm-baseline.xml",
