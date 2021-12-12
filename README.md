@@ -3,19 +3,24 @@ Squirrel Debug
 
 [![Build Status](https://img.shields.io/travis/com/squirrelphp/debug.svg)](https://travis-ci.com/squirrelphp/debug) [![Test Coverage](https://api.codeclimate.com/v1/badges/24a5dad790d20148e10a/test_coverage)](https://codeclimate.com/github/squirrelphp/debug/test_coverage) ![PHPStan](https://img.shields.io/badge/style-level%208-success.svg?style=flat-round&label=phpstan) [![Packagist Version](https://img.shields.io/packagist/v/squirrelphp/debug.svg?style=flat-round)](https://packagist.org/packages/squirrelphp/debug) [![PHP Version](https://img.shields.io/packagist/php-v/squirrelphp/debug.svg)](https://packagist.org/packages/squirrelphp/debug) [![Software License](https://img.shields.io/badge/license-MIT-success.svg?style=flat-round)](LICENSE)
 
-Provides an exception base class (OriginException) and backtracing logic to enable libraries to generate exceptions about the true origin of an exception (as opposed to where it was thrown) even if it is not know in what context the library is being used. Also includes an easy way of dumping debug data and function arguments in a shortened form. This is a helper library created for the other squirrel libraries, but it can be useful in any library or application.
+Provides backtracing functionality to enable libraries to find the true origin of a problem (as opposed to where it becomes a problem) even if it is not know in what context the library/component is being used, and includes an exception base class for adding the origin data when throwing exceptions. Also provides an easy way of dumping debug data and function arguments in a shortened form. This is a helper library created for the other squirrel libraries, but it can be useful in any library or application.
 
 Installation
 ------------
 
     composer require squirrelphp/debug
 
-OriginException
----------------
+Finding the origin method call
+------------------------------
 
-When using libraries and abstractions it often is not relevant where an exception was thrown, but where in the application the relevant call was made to the library/component that then causes the exception. This library enables libraries to go through the backtrace, capture the place where the library was called, and to point out the specific function call that caused a problem by throwing an OriginException with the origin call and location.
+When using libraries and abstractions it often is not relevant where a problem occurs (leading to an exception or warning), but where in the application the relevant call was made to the library/component that then causes the problem.
 
-`Squirrel\Debug\Debug::createException` provides this functionality by specifying what exception should be created and what classes/interfaces/namespaces in the backtrace should be ignored and considered as part of the library (and therefore not the true cause of the exception).
+`Squirrel\Debug\Debug::findOrigin` goes through the debug backtrace and finds the relevant method call that lead to the current point in the application. You can (and should) provide classes/interfaces and namespaces it should ignore (to go back further and find the method call that preceded it). This method returns an Origin object which includes the file and line of the origin together with the method call (and its arguments).
+
+Creating an OriginException
+---------------------------
+
+`Squirrel\Debug\Debug::createException` uses `Squirrel\Debug\Debug::findOrigin` to find the origin of the current problem and then creates an OriginException (which is an exception that includes the additional information about the origin). You should create your own exception classes which extend OriginException so you can then handle specific problems in your application/library.
 
 Sanitize data and arguments
 ---------------------------
