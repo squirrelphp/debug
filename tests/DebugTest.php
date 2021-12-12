@@ -10,7 +10,7 @@ use Squirrel\Debug\Tests\ExceptionTestClasses\SomeClass;
 
 class DebugTest extends \PHPUnit\Framework\TestCase
 {
-    private const DEBUG_CLASS_EXCEPTION_LINE = 90;
+    private const DEBUG_CLASS_EXCEPTION_LINE = 55;
 
     public function testCreateException()
     {
@@ -63,6 +63,36 @@ class DebugTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(\Exception::class, \get_class($exception));
     }
 
+    public function testFindOrigin()
+    {
+        $o = Debug::findOrigin();
+
+        $this->assertEquals(__FILE__, $o->getFile());
+        $this->assertEquals(__LINE__ - 3, $o->getLine());
+        $this->assertEquals('Debug::findOrigin()', $o->getCall());
+    }
+
+    public function testFindOriginNamed()
+    {
+        $o = Debug::findOrigin(
+            ignoreNamespaces: '',
+        );
+
+        $this->assertEquals(__FILE__, $o->getFile());
+        $this->assertEquals(__LINE__ - 4, $o->getLine());
+        $this->assertEquals('Debug::findOrigin([], \'\')', $o->getCall());
+    }
+
+    public function testFindOriginOutside()
+    {
+        $o = Debug::findOrigin(
+            ignoreNamespaces: 'Squirrel',
+        );
+
+        $this->assertStringStartsWith(\dirname(__DIR__, 1), $o->getFile());
+        $this->assertEquals('DebugTest->testFindOriginOutside()', $o->getCall());
+    }
+
     public function testBaseExceptionClass()
     {
         $e = Debug::createException(OriginException::class, 'Something went wrong!');
@@ -95,7 +125,7 @@ class DebugTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(__FILE__, $e->getFile());
         $this->assertEquals(__LINE__ - 7, $e->getLine());
         $this->assertEquals(self::DEBUG_CLASS_EXCEPTION_LINE, $e->getExceptionLine());
-        $this->assertEquals('Debug::createException(\'Squirrel\\\\Debug\\\\OriginException\', \'Something went wrong!\', [], [])', $e->getOriginCall());
+        $this->assertEquals('Debug::createException(\'Squirrel\\\\Debug\\\\OriginException\', \'Something went wrong!\', \'\', \'\')', $e->getOriginCall());
     }
 
     public function testBinaryData()

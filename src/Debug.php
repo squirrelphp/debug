@@ -12,7 +12,7 @@ final class Debug
      *
      * @param class-string $exceptionClass
      * @param class-string|list<class-string> $ignoreClasses Classes and interfaces to ignore in backtrace
-     * @param string|string[] $ignoreNamespaces Namespaces to ignore
+     * @param string|list<string> $ignoreNamespaces Namespaces to ignore
      */
     public static function createException(
         string $exceptionClass,
@@ -21,50 +21,6 @@ final class Debug
         string|array $ignoreNamespaces = [],
         ?\Throwable $previousException = null,
     ): \Throwable {
-        $ignoreClasses = self::convertToArray($ignoreClasses);
-        $ignoreNamespaces = self::convertToArray($ignoreNamespaces);
-
-        $ignoreClasses = \array_filter($ignoreClasses, [Debug::class, 'isNotEmptyString']);
-        $ignoreNamespaces = \array_filter($ignoreNamespaces, [Debug::class, 'isNotEmptyString']);
-
-        // Get backtrace to find out where the query error originated
-        $backtraceList = \debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT);
-
-        // Where the relevant method call was made
-        $lastInstance = null;
-
-        // Go through backtrace and find the topmost caller
-        foreach ($backtraceList as $backtrace) {
-            // We are only going through classes - this is necessary because of
-            // helper functions like array_map, which otherwise come up in the backtrace
-            if (!isset($backtrace['class'])) {
-                continue;
-            }
-
-            $lastInstance ??= $backtrace;
-
-            if (self::isIgnoredClass($backtrace['class'], $ignoreClasses)) {
-                $lastInstance = $backtrace;
-                continue;
-            }
-
-            if (self::isIgnoredNamespace($backtrace['class'], $ignoreNamespaces)) {
-                $lastInstance = $backtrace;
-                continue;
-            }
-
-            // We reached the first non-ignored backtrace - we are at the top
-            if (
-                $lastInstance !== $backtrace
-            ) {
-                break;
-            }
-        }
-
-        // Shorten the backtrace class to just the class name without namespace
-        $parts = \explode('\\', $lastInstance['class'] ?? '');
-        $shownClass = \array_pop($parts);
-
         // Make sure the provided exception class inherits from Throwable or replace it with Exception
         if (!\in_array(\Throwable::class, self::getClassInterfaces($exceptionClass), true)) {
             $exceptionClass = \Exception::class;
@@ -84,13 +40,22 @@ final class Debug
                 $previousException,
             );
         } else {
+            $ignoreClassesArray = self::convertToArray($ignoreClasses);
+            // Ignore this class as we are doing another internal call to findOrigin below
+            $ignoreClassesArray[] = self::class;
+
+            $origin = self::findOrigin(
+                ignoreClasses: $ignoreClassesArray,
+                ignoreNamespaces: $ignoreNamespaces,
+            );
+
             /**
              * @var OriginException $exception At this point we know that $exceptionClass inherits from OriginException for sure
              */
             $exception = new $exceptionClass(
-                originCall: $shownClass . ($lastInstance['type'] ?? '') . ($lastInstance['function'] ?? '') . '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
-                originFile: $lastInstance['file'] ?? '',
-                originLine: $lastInstance['line'] ?? 0,
+                originCall: $origin->getCall(),
+                originFile: $origin->getFile(),
+                originLine: $origin->getLine(),
                 message: \str_replace("\n", ' ', $message),
                 code: (isset($previousException) ? $previousException->getCode() : 0),
                 previous: $previousException,
@@ -98,6 +63,67 @@ final class Debug
         }
 
         return $exception;
+    }
+
+    /**
+     * Find origin of current position in code by backtracing and ignoring some classes/namespaces
+     *
+     * @param class-string|list<class-string> $ignoreClasses Classes and interfaces to ignore in backtrace
+     * @param string|list<string> $ignoreNamespaces Namespaces to ignore
+     */
+    public static function findOrigin(
+        string|array $ignoreClasses = [],
+        string|array $ignoreNamespaces = [],
+    ): Origin {
+        $ignoreClassesArray = self::convertToArray($ignoreClasses);
+        $ignoreNamespacesArray = self::convertToArray($ignoreNamespaces);
+
+        $ignoreClassesArray = \array_filter($ignoreClassesArray, [Debug::class, 'isNotEmptyString']);
+        $ignoreNamespacesArray = \array_filter($ignoreNamespacesArray, [Debug::class, 'isNotEmptyString']);
+
+        // Get backtrace to find out where the query error originated
+        $backtraceList = \debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT);
+
+        // Where the relevant method call was made
+        $lastInstance = null;
+
+        // Go through backtrace and find the topmost caller
+        foreach ($backtraceList as $backtrace) {
+            // We are only going through classes - this is necessary because of
+            // helper functions like array_map, which otherwise come up in the backtrace
+            if (!isset($backtrace['class'])) {
+                continue;
+            }
+
+            $lastInstance ??= $backtrace;
+
+            if (self::isIgnoredClass($backtrace['class'], $ignoreClassesArray)) {
+                $lastInstance = $backtrace;
+                continue;
+            }
+
+            if (self::isIgnoredNamespace($backtrace['class'], $ignoreNamespacesArray)) {
+                $lastInstance = $backtrace;
+                continue;
+            }
+
+            // We reached the first non-ignored backtrace - we are at the top
+            if (
+                $lastInstance !== $backtrace
+            ) {
+                break;
+            }
+        }
+
+        // Shorten the backtrace class to just the class name without namespace
+        $parts = \explode('\\', $lastInstance['class'] ?? '');
+        $shownClass = \array_pop($parts);
+
+        return new Origin(
+            call: $shownClass . ($lastInstance['type'] ?? '') . ($lastInstance['function'] ?? '') . '(' . self::sanitizeArguments($lastInstance['args'] ?? []) . ')',
+            file: $lastInstance['file'] ?? '',
+            line: $lastInstance['line'] ?? 0,
+        );
     }
 
     /**
@@ -156,6 +182,11 @@ final class Debug
         return '[' . \implode(', ', $result) . ']';
     }
 
+    /**
+     * @template T of string|class-string
+     * @psalm-param T|list<T> $list
+     * @psalm-return list<T>
+     */
     private static function convertToArray(string|array $list): array
     {
         if (\is_string($list)) {
